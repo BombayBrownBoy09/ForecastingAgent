@@ -1,0 +1,10 @@
+# Ignore Python virtual environments
+venv/
+
+# Byte‐compiled / cached files
+__pycache__/
+*.py[cod]
+
+# Common IDE/editor folders
+.vscode/
+.idea/
