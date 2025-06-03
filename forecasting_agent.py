@@ -1,3 +1,17 @@
+# Generate a Python module that implements a forecasting agent combining Prophet and a residual-predicting LSTM. The module should include:
+# 1. A ResidualLSTM class (a PyTorch module with an LSTM and a fully connected layer that takes inputs of shape (batch, seq_len, input_size) and returns a single output per sequence).
+# 2. A SalesDataset class (a PyTorch Dataset that creates rolling windows from a pandas DataFrame grouped by "tcin" using columns: "units_sold", "day_of_week", "week_of_year", "month", "region_id", "category_id", "new_launch_flag", "promo", "state_holiday_id", "school_holiday_id").
+# 3. A ForecastingAgent class that:
+#    - Initializes with Prophet and LSTM parameters.
+#    - Fits a Prophet model per tcin using a grouped DataFrame.
+#    - Computes residuals (actual units_sold minus the Prophet prediction).
+#    - Trains a ResidualLSTM model on the residuals using the SalesDataset.
+#    - Implements a predict method that uses the Prophet model and, if available, the LSTM model to adjust predictions.
+# Ensure the code follows the structure:
+# - Import pandas, numpy, Prophet, torch, and torch.nn.
+# - Define the ResidualLSTM, SalesDataset, then ForecastingAgent (with methods fit_prophet, compute_residuals, fit_lstm_on_residuals, fit, and predict).
+
+
 import pandas as pd
 import numpy as np
 

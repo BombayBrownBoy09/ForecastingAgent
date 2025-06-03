@@ -1,3 +1,17 @@
+# Generate a Python script that loads and prepares sales data for Rossmann data forecasting. It should:
+# 1. Import pandas, numpy, and LabelEncoder from scikit-learn.
+# 2. Define a function load_and_prep_data() that reads "train.csv" (with "Date" parsed as dates) and "store.csv".
+# 3. Merge the two DataFrames on "Store" using a left join.
+# 4. Filter the data to include only rows where "Open" is 1 and "Sales" > 0.
+# 5. Rename columns: "Date" to "date", "Store" to "tcin", "Sales" to "units_sold", "StoreType" to "store_type", "Assortment" to "assortment", "Promo" to "promo", "StateHoliday" to "state_holiday", and "SchoolHoliday" to "school_holiday".
+# 6. Encode "state_holiday" and "school_holiday" as numeric columns "state_holiday_id" and "school_holiday_id" using LabelEncoder.
+# 7. Extract "day_of_week", "week_of_year" (from dt.isocalendar), and "month" from the "date" column.
+# 8. Encode "store_type" to "region_id" and "assortment" to "category_id" using LabelEncoder.
+# 9. Set a new column "new_launch_flag" to 0.
+# 10. Create an aggregated DataFrame (agg_df) by grouping on:
+#     ["date", "tcin", "region_id", "category_id", "new_launch_flag", "day_of_week", "week_of_year", "month", "promo", "state_holiday_id", "school_holiday_id"]
+#     and summing "units_sold". Sort by "tcin" and "date", reset the index, and return agg_df.
+
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import LabelEncoder

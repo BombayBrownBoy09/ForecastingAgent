@@ -1,3 +1,16 @@
+# Generate a Python Streamlit dashboard for inventory decision support. The script should:
+# 1. Import os, pandas, numpy, base64, matplotlib.pyplot, streamlit, timedelta from datetime, and openai.
+# 2. Import ForecastingAgent from forecasting_agent and load_and_prep_data from forecast_agent_data_rossmann.
+# 3. Define a function ask_copilot(question: str, context: str) that uses openai.chat.completions (model=gpt-4) to get inventory guidance (using an OPENAI_API_KEY from the env).
+# 4. Set up the Streamlit UI: a sidebar for file upload (CSV with sales, similar to Rossmann’s train.csv) and a text area for user questions.
+# 5. Load and prepare data using load_and_prep_data; allow user file upload that overrides the default file.
+# 6. Let the user select a TCIN and show the corresponding historical sales plot.
+# 7. On a “Train & Forecast” button click: split data into training/validation (last 4 weeks for validation), fit ForecastingAgent (Prophet with weekly/yearly seasonality and an LSTM residual), and forecast for the next 4 weeks.
+# 8. Merge historical and forecast results and plot both.
+# 9. Display a forecast table and offer a CSV download link via base64.
+# 10. If a question is entered, call ask_copilot with recent actual and forecast data as context, and display the recommendation.
+# Include all elements as seen in the attached code.
+
 import os
 import pandas as pd
 import numpy as np
@@ -209,4 +222,4 @@ else:
 st.markdown("---")
 st.write("**Data Source:** Kaggle Rossmann `train.csv` (merged with `store.csv`).")
 st.write("**Models:** Prophet (weekly & yearly seasonality) + LSTM residual.")
-st.write("**Copilot:** OpenAI GPT‐3.5 under the hood for natural‐language Q&A.")
+st.write("**Copilot:** OpenAI GPT‐4 under the hood for natural‐language Q&A.")
