@@ -1,25 +1,27 @@
-````markdown
 ## Overview
+
 This repository implements a hybrid sales‐forecasting agent that combines Facebook Prophet for baseline trends and a small LSTM network for residual correction. The core component is `forecasting_agent.py`, which defines:
 
-- **`ResidualLSTM`**: a PyTorch module that takes a rolling window of residuals + static features and outputs a single residual adjustment.
-- **`SalesDataset`**: a PyTorch `Dataset` that builds sequence windows from historical sales (residuals + engineered features).
-- **`ForecastingAgent`**: orchestrates the pipeline. For each SKU (identified by `tcin`), it:  
-  1. Fits a Prophet model on historical `date` & `units_sold`.  
-  2. Computes Prophet residuals (`residual = actual − yhat`).  
-  3. Trains the LSTM on those residuals (using `SalesDataset`).  
+* **`ResidualLSTM`**: a PyTorch module that takes a rolling window of residuals + static features and outputs a single residual adjustment.
+* **`SalesDataset`**: a PyTorch `Dataset` that builds sequence windows from historical sales (residuals + engineered features).
+* **`ForecastingAgent`**: orchestrates the pipeline. For each SKU (identified by `tcin`), it:
+
+  1. Fits a Prophet model on historical `date` & `units_sold`.
+  2. Computes Prophet residuals (`residual = actual − yhat`).
+  3. Trains the LSTM on those residuals (using `SalesDataset`).
   4. Offers a `predict(df_future, hist_df)` method that returns a DataFrame with columns `yhat_prophet`, `yhat_residual`, and `yhat_final` (sum of the two).
 
 ---
 
 ## Installation
-1. Clone or unzip this repo so that `forecasting_agent.py` is in your Python path.  
-2. Create a new virtual environment (recommended):  
+
+1. Clone or unzip this repo so that `forecasting_agent.py` is in your Python path.
+2. Create a new virtual environment (recommended):
+
    ```bash
    python3 -m venv venv
    source venv/bin/activate
-````
-
+   ```
 3. Install dependencies (see `requirements.txt`):
 
    ```bash
@@ -181,6 +183,3 @@ pip install -r requirements.txt
 * Ensure your historical DataFrame uses `datetime` dtype for the `date` column (Prophet expects `ds`).
 * The LSTM expects all engineered features (`day_of_week`, `week_of_year`, `month`, etc.) to be numeric (ints or floats).
 * For custom datasets, replicate the same feature engineering steps you see in `forecast_agent_data_rossmann.py`.
-
-```
-```
