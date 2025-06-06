@@ -183,3 +183,17 @@ pip install -r requirements.txt
 * Ensure your historical DataFrame uses `datetime` dtype for the `date` column (Prophet expects `ds`).
 * The LSTM expects all engineered features (`day_of_week`, `week_of_year`, `month`, etc.) to be numeric (ints or floats).
 * For custom datasets, replicate the same feature engineering steps you see in `forecast_agent_data_rossmann.py`.
+
+
+Try:
+https://bombaybrownboy09-forecasting-inventory-copilot-interface-gs4sdr.streamlit.app/
+
+Prompts:
+TCIN:5
+
+1. How much should I order this week?
+2. What days will i expect more demand than usual?
+3. What days should I put this on promo to avoid backroom clutter due to not selling as much?
+
+Be brief and direct with each answer.
+
