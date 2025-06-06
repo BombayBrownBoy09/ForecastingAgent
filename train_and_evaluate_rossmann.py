@@ -1,5 +1,7 @@
 # train_and_evaluate_rossmann.py
 
+import subprocess
+import sys
 import pandas as pd
 import numpy as np
 from datetime import timedelta
@@ -7,7 +9,23 @@ from datetime import timedelta
 from forecast_agent_data_rossmann import load_and_prep_data
 from forecasting_agent import ForecastingAgent
 
+def run_tests():
+    # Run all tests under the tests folder with names starting with test_
+    result = subprocess.run(
+        ["python", "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+    print(result.stdout)
+    if result.returncode != 0:
+        print("Tests failed. Aborting training and evaluation.")
+        sys.exit(1)
+
 if __name__ == "__main__":
+    # Run test pre-checks
+    run_tests()
+    
     agg_df = load_and_prep_data()
 
     # 3.1: Snapshot the last date in our aggregated Rossmann data
@@ -24,12 +42,12 @@ if __name__ == "__main__":
         prophet_params={"weekly_seasonality": True, "yearly_seasonality": True},
         lstm_params={
             "input_size": 10,
-            "hidden_size": 32,
-            "num_layers": 1,
+            "hidden_size": 64,  # Increased hidden size for better accuracy
+            "num_layers": 2,   # Increased number of layers for better feature extraction
             "output_size": 1,
-            "lr": 1e-3,
-            "epochs": 5,
-            "batch_size": 64
+            "lr": 5e-3,        # Increased learning rate for faster convergence
+            "epochs": 3,       # Reduced epochs for faster training
+            "batch_size": 128  # Increased batch size for faster training
         },
         seq_len=8
     )

@@ -1,17 +1,3 @@
-# Generate a Python module that implements a forecasting agent combining Prophet and a residual-predicting LSTM. The module should include:
-# 1. A ResidualLSTM class (a PyTorch module with an LSTM and a fully connected layer that takes inputs of shape (batch, seq_len, input_size) and returns a single output per sequence).
-# 2. A SalesDataset class (a PyTorch Dataset that creates rolling windows from a pandas DataFrame grouped by "tcin" using columns: "units_sold", "day_of_week", "week_of_year", "month", "region_id", "category_id", "new_launch_flag", "promo", "state_holiday_id", "school_holiday_id").
-# 3. A ForecastingAgent class that:
-#    - Initializes with Prophet and LSTM parameters.
-#    - Fits a Prophet model per tcin using a grouped DataFrame.
-#    - Computes residuals (actual units_sold minus the Prophet prediction).
-#    - Trains a ResidualLSTM model on the residuals using the SalesDataset.
-#    - Implements a predict method that uses the Prophet model and, if available, the LSTM model to adjust predictions.
-# Ensure the code follows the structure:
-# - Import pandas, numpy, Prophet, torch, and torch.nn.
-# - Define the ResidualLSTM, SalesDataset, then ForecastingAgent (with methods fit_prophet, compute_residuals, fit_lstm_on_residuals, fit, and predict).
-
-
 import pandas as pd
 import numpy as np
 
@@ -33,7 +19,6 @@ class ResidualLSTM(nn.Module):
         out = self.fc(out)
         return out.squeeze(1)
 
-
 # 2.2: Dataset that creates rolling windows for LSTM training
 class SalesDataset(Dataset):
     def __init__(self, df, seq_len=8, target_col="units_sold"):
@@ -42,23 +27,21 @@ class SalesDataset(Dataset):
         grouped = df.groupby("tcin")
         for tcin, group in grouped:
             group_sorted = group.sort_values("date")
-
             # Use numeric holiday‐ID columns
             features = group_sorted[
                 [
-                  "units_sold",
-                  "day_of_week",
-                  "week_of_year",
-                  "month",
-                  "region_id",
-                  "category_id",
-                  "new_launch_flag",
-                  "promo",
-                  "state_holiday_id",    
-                  "school_holiday_id"   
+                    "units_sold",
+                    "day_of_week",
+                    "week_of_year",
+                    "month",
+                    "region_id",
+                    "category_id",
+                    "new_launch_flag",
+                    "promo",
+                    "state_holiday_id",    
+                    "school_holiday_id"   
                 ]
             ].values.astype(np.float32)
-
             for i in range(len(features) - seq_len):
                 seq_x = features[i : i + seq_len]
                 seq_y = features[i + seq_len, 0]  # next units_sold
@@ -70,18 +53,14 @@ class SalesDataset(Dataset):
     def __getitem__(self, idx):
         seq_x, seq_y = self.data[idx]
         return (
-          torch.tensor(seq_x, dtype=torch.float32),
-          torch.tensor(seq_y, dtype=torch.float32)
+            torch.tensor(seq_x, dtype=torch.float32),
+            torch.tensor(seq_y, dtype=torch.float32)
         )
-
 
 # 2.3: The Hybrid ForecastingAgent
 class ForecastingAgent:
     def __init__(self, prophet_params=None, lstm_params=None, seq_len=8):
-        # Remove any unsupported Prophet kwargs (verbose, mcmc_samples, etc.)
         self.prophet_params = prophet_params or {}
-        # You can still pass valid Prophet args here (e.g. seasonality_mode), but do not include `verbose` or `mcmc_samples`.
-
         self.lstm_params = lstm_params or {
             "input_size": 10,     # units_sold + 9 engineered features
             "hidden_size": 32,
@@ -100,7 +79,7 @@ class ForecastingAgent:
             prophet_df = group[["date", "units_sold"]].rename(
                 columns={"date": "ds", "units_sold": "y"}
             )
-            m = Prophet(**self.prophet_params)  # no verbose/mcmc params
+            m = Prophet(**self.prophet_params)
             m.fit(prophet_df)
             self.prophet_models[tcin] = m
 
@@ -108,11 +87,12 @@ class ForecastingAgent:
         df = df.copy()
         df["prophet_pred"] = 0.0
         for tcin, group in df.groupby("tcin"):
-            m = self.prophet_models[tcin]
-            tmp = group[["date"]].rename(columns={"date": "ds"})
-            yhat = m.predict(tmp)["yhat"].values
-            mask = df["tcin"] == tcin
-            df.loc[mask, "prophet_pred"] = yhat
+            m = self.prophet_models.get(tcin)
+            if m is not None:
+                tmp = group[["date"]].rename(columns={"date": "ds"})
+                yhat = m.predict(tmp)["yhat"].values
+                mask = df["tcin"] == tcin
+                df.loc[mask, "prophet_pred"] = yhat
         df["residual"] = df["units_sold"] - df["prophet_pred"]
         return df
 
@@ -130,8 +110,7 @@ class ForecastingAgent:
             ].rename(columns={"residual": "units_sold"})
             ds_features["tcin"] = tcin
             ds_features["date"] = ds["date"]
-            ds_features["region_id"] = ds["region_id"]
-
+            # Create dataset and dataloader
             dataset = SalesDataset(ds_features, seq_len=self.seq_len)
             loader = DataLoader(dataset, batch_size=self.lstm_params["batch_size"], shuffle=True)
 
@@ -145,65 +124,63 @@ class ForecastingAgent:
             criterion = nn.MSELoss()
 
             for epoch in range(self.lstm_params["epochs"]):
-                total_loss = 0.0
                 for X_batch, y_batch in loader:
                     optimizer.zero_grad()
                     pred = model(X_batch)
                     loss = criterion(pred, y_batch)
                     loss.backward()
                     optimizer.step()
-                    total_loss += loss.item()
             self.residual_models[tcin] = model
 
     def fit(self, df):
-        # 1) Fit Prophet per store
+        # Fit Prophet models per tcin
         self.fit_prophet(df)
-        # 2) Compute residuals
+        # Compute residuals and add to DataFrame
         df_resid = self.compute_residuals(df)
-        # 3) Fit LSTM on residuals
+        # Fit LSTM on residuals
         self.fit_lstm_on_residuals(df_resid)
-        return df_resid  # return with prophet_pred included
+        return df_resid
 
     def predict(self, df_future, hist_df):
-        """
-        df_future: same columns as agg_df minus 'units_sold'
-        hist_df: original historical agg_df with 'prophet_pred' column
-        """
+        # Ensure hist_df has prophet_pred; if not, compute it.
+        if "prophet_pred" not in hist_df.columns:
+            hist_df = self.compute_residuals(hist_df)
+
         all_preds = []
         for tcin, group in df_future.groupby("tcin"):
-            # 1) Prophet baseline
-            m = self.prophet_models.get(tcin, None)
+            m = self.prophet_models.get(tcin)
             if m is None:
                 continue
             tmp = group[["date"]].rename(columns={"date": "ds"})
-            yhat_base = m.predict(tmp)["yhat"].values
+            yhat_prophet = m.predict(tmp)["yhat"].values
 
-            # 2) LSTM residual if available
-            yhat_resid = np.zeros_like(yhat_base)
-            lstm_model = self.residual_models.get(tcin, None)
+            # Default residual correction is zero.
+            yhat_resid = np.zeros_like(yhat_prophet)
+            lstm_model = self.residual_models.get(tcin)
             if lstm_model is not None:
                 hist_group = hist_df[hist_df["tcin"] == tcin].sort_values("date")
                 if len(hist_group) >= self.seq_len:
-                    last_window = hist_group.iloc[-self.seq_len :]
+                    last_window = hist_group.iloc[-self.seq_len:]
                     resid_hist = (last_window["units_sold"] - last_window["prophet_pred"]).values
                     features = last_window[
                         [
                             "day_of_week", "week_of_year", "month",
-                            "region_id", "category_id", "new_launch_flag",
-                            "promo", "state_holiday_id", "school_holiday_id"
+                            "region_id", "category_id", "new_launch_flag", "promo",
+                            "state_holiday_id", "school_holiday_id"
                         ]
                     ].values
-                    stacked = np.concatenate([resid_hist.reshape(-1, 1), features], axis=1)  # (seq_len, 10)
-                    inp = torch.tensor(stacked.reshape(1, self.seq_len, 10), dtype=torch.float32)
-                    with torch.no_grad():
-                        yhat_resid_val = lstm_model(inp).numpy()
-                    yhat_resid[0] = yhat_resid_val  # only first step
+                    # Create input for LSTM: concatenate residual history with features.
+                    lstm_input = np.concatenate([resid_hist.reshape(-1, 1), features], axis=1)
+                    lstm_input = torch.tensor(lstm_input, dtype=torch.float32).unsqueeze(0)
+                    # Predict residual correction for one step
+                    pred_resid = lstm_model(lstm_input).detach().numpy()
+                    # Broadcast prediction to all future rows
+                    yhat_resid = np.full_like(yhat_prophet, pred_resid[0])
+            yhat_final = yhat_prophet + yhat_resid
 
-            yhat_final = yhat_base + yhat_resid
-            out = group.copy()
-            out["yhat_prophet"] = yhat_base
-            out["yhat_residual"] = yhat_resid
-            out["yhat_final"] = yhat_final
-            all_preds.append(out[["date", "tcin", "yhat_prophet", "yhat_residual", "yhat_final"]])
-
-        return pd.concat(all_preds, ignore_index=True) if all_preds else pd.DataFrame()
+            forecast_df = group.copy()
+            forecast_df["yhat_prophet"] = yhat_prophet
+            forecast_df["yhat_residual"] = yhat_resid
+            forecast_df["yhat_final"] = yhat_final
+            all_preds.append(forecast_df)
+        return pd.concat(all_preds) if all_preds else pd.DataFrame()
