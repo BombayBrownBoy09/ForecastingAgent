@@ -37,7 +37,7 @@ def ask_copilot(question: str, context: str) -> str:
     (compatible with openai‐python >= 1.0.0) and return the answer.
     You must have OPENAI_API_KEY set in your environment.
     """
-    openai.api_key = os.getenv("OPENAI_API_KEY", "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")
+    openai.api_key = os.getenv("OPENAI_API_KEY", "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")
     if not openai.api_key:
         return "🔴 ERROR: OPENAI_API_KEY not set."
 
